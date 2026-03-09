@@ -55,8 +55,11 @@ def get_all(self):
 
 def update(self, obj_id, data: dict):
     obj = self.get(obj_id)
+    if not obj:
+        raise ValueError("Amenity not found")
+
     for key, value in data.items():
-        if hasattr(obj, key):
+        if key != "id" and hasattr(obj, key):
             setattr(obj, key, value)
         return obj
 
