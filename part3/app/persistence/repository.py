@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from app import db  # Assuming you have set up SQLAlchemy in your Flask app
+from app import db
 from app.models import user, place, review, amenity
 
 """The in-memory repository will handle object storage and validation.

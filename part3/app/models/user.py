@@ -3,7 +3,7 @@ from app.models.base_model import BaseModel
 from app.__init__ import bcrypt
 
 class User(BaseModel):
-    def __init__(self, first_name, last_name, email):
+    def __init__(self, first_name, last_name, email, hash_password):
         super().__init__()
 
         self.__first_name = None
@@ -15,7 +15,11 @@ class User(BaseModel):
         self.__email = None
         self.email = email
 
+        self.__hash_password = None
+        self.hash_password = hash_password
+
         self.is_admin = False
+
         self.reviews = []
         self.places = []
 
