@@ -22,11 +22,23 @@ user_update_model = api.model('UserUpdate', {
 @api.route('/')
 class UserList(Resource):
 
+    @jwt_required()
     @api.expect(user_model, validate=True)
     @api.response(201, 'User created')
     @api.response(400, 'Email already registered')
+    @api.response(400, 'Invalid input data')
+    @api.response(400, 'Password required')
+    @api.response(403, 'Admin privileges required')
     def post(self):
-        """Register a new user"""
+        """Register a new user — admin only"""
+        claims = get_jwt()
+
+        if not claims.get('is_admin'):
+            return {'error': 'Admin privileges required'}, 403
+
+        user_data = api.payload
+        email = user_data.get('email')
+        password = user_data.get('password')
 
         data = api.payload
         email = data.get('email')
@@ -95,12 +107,25 @@ class UserResource(Resource):
             return {'error': 'User not found'}, 404
 
         data = api.payload
+
+        # Un user normal ne peut pas changer email/password
+        if not is_admin:
+            if 'email' in data or 'password' in data:
+                return {'error': 'Unauthorized: cannot modify email or password'}, 403
+
+        # Si admin change l'email, vérifier qu'il n'est pas déjà pris
+        if is_admin and 'email' in data:
+            existing_user = facade.get_user_by_email(data['email'])
+            if existing_user and existing_user.id != user_id:
+                return {'error': 'Email already in use'}, 400
+
         updated_user = facade.update_user(user_id, data)
+        if not updated_user:
+            return {'error': 'Invalid input data'}, 400
 
         return {
-            'id': user.id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'is_admin': user.is_admin
+            'id': updated_user.id,
+            'first_name': updated_user.first_name,
+            'last_name': updated_user.last_name,
+            'email': updated_user.email
         }, 200
