@@ -1,4 +1,5 @@
 from app.persistence.repository import SQLAlchemyRepository
+from app.persistence.user_repository import UserRepository
 
 """This class will handle communication between the Presentation,
 Business Logic, and Persistence layers. You will interact with the repositories
@@ -12,7 +13,7 @@ from app.models.review import Review
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repository = SQLAlchemyRepository(User)
+        self.user_repository = UserRepository()
         self.place_repository = SQLAlchemyRepository(Place)
         self.review_repository = SQLAlchemyRepository(Review)
         self.amenity_repository = SQLAlchemyRepository(Amenity)
@@ -27,7 +28,7 @@ class HBnBFacade:
         return self.user_repository.get(user_id)
 
     def get_user_by_email(self, email):
-        return self.user_repository.get_by_attribute("email", email)
+        return self.user_repository.get_user_by_email(email)
 
     def get_all_users(self):
         return self.user_repository.get_all()
