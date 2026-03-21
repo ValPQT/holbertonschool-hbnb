@@ -1099,3 +1099,8 @@ By the end of this task, you should have:
     Created an ER diagram in Mermaid.js that accurately represents the database schema for HBnB.
     Understood the various types of relationships (one-to-many, many-to-many) and how they are represented visually.
     Exported the diagram to be included in your project documentation.
+
+
+### ER diagram representing the core entities of the HBnB project
+
+![Mermaid](Mermaid.png)
