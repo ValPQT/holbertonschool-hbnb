@@ -133,3 +133,8 @@ from app.models.base_model import BaseModel
 
 obj = BaseModel()
 print(obj.id)
+```
+
+### ER diagram representing the core entities of the HBnB project
+
+![Mermaid](Mermaid.png)
