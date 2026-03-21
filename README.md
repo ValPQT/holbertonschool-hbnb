@@ -1103,4 +1103,4 @@ By the end of this task, you should have:
 
 ### ER diagram representing the core entities of the HBnB project
 
-![Mermaid](Mermaid.png)
+![With Booking implementation only in the ER Diagram](<ER DIAGRAM.png>)
