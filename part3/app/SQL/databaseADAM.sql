@@ -1,4 +1,4 @@
-/* Initial Data for HBNB */
+/* Initial Data for HBNB - SQLite */
 
 /* -------- ADMIN USER -------- */
 INSERT INTO users (id, email, first_name, last_name, password, is_admin)
@@ -8,7 +8,7 @@ VALUES (
     'Admin',
     'HBnB',
     '$2b$12$KIX1y4zL6Q6G9yC1nH4nXu0v.yhUk7Q8tSvy1K9yKQzXj1a9R2N3G',
-    TRUE
+    1
 );
 
 /* -------- AMENITIES -------- */

@@ -1,4 +1,4 @@
-from app import create_app, bcrypt
+from app import create_app, bcrypt, db
 from app.services import facade
 
 def seed_admin():
@@ -19,6 +19,7 @@ def seed_admin():
 app = create_app()
 
 with app.app_context():
+    db.create_all()  
     seed_admin()
 
 if __name__ == '__main__':
