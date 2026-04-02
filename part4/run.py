@@ -12,7 +12,7 @@ def seed_admin():
         "email": admin_email,
         "first_name": "Admin",
         "last_name": "User",
-        "password": bcrypt.generate_password_hash("admin123").decode('utf-8'),  
+        "password": "admin123", 
         "is_admin": True
     })
 
