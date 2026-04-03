@@ -1,12 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialisation de l'affichage (Auth + Fetch)
+    console.log("🚀 Script chargé !");
     checkAuthentication();
-
-    // 2. Initialisation de l'écouteur pour le filtrage par prix
-    setupPriceFilter();
+    
+    // 💡 LOGIQUE DE ROUTAGE : On regarde sur quelle page on est
+    if (document.getElementById('places-list')) {
+        // On est sur index.html
+        setupPriceFilter();
+        fetchPlaces(); 
+    } else if (document.getElementById('place-details')) {
+        // On est sur place.html
+        fetchPlaceDetails();
+    }
 });
 
-// --- Gestion des Cookies ---
+// --- Cookies ---
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -14,91 +21,119 @@ function getCookie(name) {
     return null;
 }
 
-// --- Vérification de l'Authentification ---
+// --- Auth ---
 function checkAuthentication() {
     const token = getCookie('token');
-    const loginLink = document.querySelector('.login-button'); // Cible ton bouton Login
-
-    if (!token) {
-        if (loginLink) loginLink.style.display = 'block';
-        // Optionnel : charger les places même sans token si l'API est publique
-        fetchPlaces(null);
-    } else {
-        if (loginLink) loginLink.style.display = 'none';
-        fetchPlaces(token);
+    const loginLink = document.getElementById('login-link');
+    if (loginLink) {
+        loginLink.style.display = token ? 'none' : 'block';
     }
 }
 
-// --- Récupération des données API ---
-async function fetchPlaces(token) {
-    const apiUrl = 'http://127.0.0.1:5000/api/v1/places/'; // URL à vérifier selon ton backend
-    const headers = { 'Content-Type': 'application/json' };
-    
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
+// --- TÂCHE 2 : FETCH LISTE (INDEX) ---
+async function fetchPlaces() {
+    const apiUrl = 'http://127.0.0.1:5000/api/v1/places/';
     try {
-        const response = await fetch(apiUrl, { method: 'GET', headers: headers });
+        const response = await fetch(apiUrl); // Plus besoin de token ici car c'est public
         if (response.ok) {
             const places = await response.json();
             displayPlaces(places);
-        } else {
-            console.error('Erreur lors de la récupération des lieux');
         }
     } catch (error) {
-        console.error('Erreur réseau :', error);
+        console.error('💥 Erreur réseau:', error);
     }
 }
 
-// --- Affichage Dynamique des Lieux ---
 function displayPlaces(places) {
     const placesList = document.getElementById('places-list');
     if (!placesList) return;
 
-    // Vide les cartes statiques actuelles du HTML
-    placesList.innerHTML = '';
-
+    placesList.innerHTML = ''; 
     places.forEach(place => {
-        // Création de l'élément article/div
         const card = document.createElement('div');
-        card.classList.add('place-card');
-        
-        // On stocke le prix dans un attribut data- pour le filtre JS
-        const price = place.price_by_night || place.price || 0;
-        card.setAttribute('data-price', price);
+        card.className = 'place-card';
+        const price = parseFloat(place.price) || 0;
 
-        // Injection du HTML (Structure identique à ton CSS)
+        card.setAttribute('data-price', price);
         card.innerHTML = `
-            <img src="${place.image_url || 'images/place1.jpg'}" alt="${place.name}">
-            <h3>${place.name || place.title}</h3>
-            <p>$${price} per night</p>
+            <img src="images/place1.jpg" alt="${place.title}">
+            <h3>${place.title}</h3>
+            <p><strong>$${price}</strong> per night</p>
             <a href="place.html?id=${place.id}" class="details-button">View Details</a>
         `;
-
         placesList.appendChild(card);
     });
 }
 
-// --- Filtrage Client-Side ---
+// --- TÂCHE 3 : FETCH DÉTAILS (PLACE.HTML) ---
+async function fetchPlaceDetails() {
+    const params = new URLSearchParams(window.location.search);
+    const placeId = params.get('id');
+    if (!placeId) return;
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/api/v1/places/${placeId}`);
+        if (response.ok) {
+            const place = await response.json();
+            
+            // Injection dynamique des données
+            document.getElementById('place-title').textContent = place.title;
+            document.getElementById('place-price').textContent = place.price;
+            document.getElementById('place-description').textContent = place.description;
+            document.getElementById('place-host').textContent = `${place.owner.first_name} ${place.owner.last_name}`;
+            
+            // Équipements
+            const amenitiesContainer = document.getElementById('amenities-list');
+            amenitiesContainer.innerHTML = '';
+            place.amenities.forEach(amenity => {
+                const span = document.createElement('span');
+                span.className = 'amenity-tag';
+                span.textContent = amenity.name;
+                amenitiesContainer.appendChild(span);
+            });
+
+            // Reviews
+            displayReviews(place.reviews);
+
+            // Tâche 4 : Afficher le bouton Review seulement si connecté
+            if (getCookie('token')) {
+                document.getElementById('add-review-section').style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error("Erreur détails:", error);
+    }
+}
+
+function displayReviews(reviews) {
+    const container = document.getElementById('reviews-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!reviews || reviews.length === 0) {
+        container.innerHTML = '<p>No reviews yet.</p>';
+        return;
+    }
+    reviews.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'review-card';
+        div.innerHTML = `
+            <h4>User ID: ${r.user_id || 'Anonymous'}</h4>
+            <p class="rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</p>
+            <p>${r.text}</p>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// --- Filter ---
 function setupPriceFilter() {
     const priceFilter = document.getElementById('price-filter');
     if (!priceFilter) return;
-
-    priceFilter.addEventListener('change', (event) => {
-        const selectedMaxPrice = event.target.value;
-        const allCards = document.querySelectorAll('.place-card');
-
-        allCards.forEach(card => {
-            const cardPrice = parseFloat(card.getAttribute('data-price'));
-
-            if (selectedMaxPrice === 'all') {
-                card.style.display = 'block';
-            } else {
-                const max = parseFloat(selectedMaxPrice);
-                // On affiche uniquement si le prix est inférieur ou égal au filtre
-                card.style.display = (cardPrice <= max) ? 'block' : 'none';
-            }
+    priceFilter.addEventListener('change', (e) => {
+        const max = e.target.value;
+        document.querySelectorAll('.place-card').forEach(card => {
+            const p = parseFloat(card.dataset.price);
+            card.style.display = (max === 'all' || p <= parseFloat(max)) ? 'block' : 'none';
         });
     });
 }
