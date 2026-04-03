@@ -92,6 +92,7 @@ class PlaceList(Resource):
             {
                 'id': p.id,
                 'title': p.title,
+                'price': p.price,  # <--- AJOUTE CETTE LIGNE
                 'latitude': p.latitude,
                 'longitude': p.longitude
             } for p in places
@@ -104,7 +105,6 @@ class PlaceIDResource(Resource):
     @api.response(404, 'Place not found')
     @api.response(403, 'Unauthorized')
     @api.response(400, 'Invalid input data')
-    @jwt_required()
     def get(self, place_id):
         """Get place details by ID — public"""
         place = facade.get_place(place_id)
