@@ -1,50 +1,104 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initialisation de l'affichage (Auth + Fetch)
+    checkAuthentication();
 
-
-    const loginForm = document.getElementById('login-form');
-
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            // Empêche le rechargement de la page
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            // Récupère les valeurs saisies par l'utilisateur
-
-            await loginUser(email, password);
-        });
-    }
+    // 2. Initialisation de l'écouteur pour le filtrage par prix
+    setupPriceFilter();
 });
 
-async function loginUser(email, password) {
-    try {
-        const response = await fetch('http://127.0.0.1:5000/api/v1/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
-            // Convertit l'objet JS en JSON pour l'envoyer à l'API
-        });
+// --- Gestion des Cookies ---
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 
-        if (response.ok) {
-            const data = await response.json();
-            // Récupère la réponse JSON de l'API
+// --- Vérification de l'Authentification ---
+function checkAuthentication() {
+    const token = getCookie('token');
+    const loginLink = document.querySelector('.login-button'); // Cible ton bouton Login
 
-            document.cookie = `token=${data.access_token}; path=/`;
-            // Stocke le token JWT dans un cookie accessible sur toutes les pages (path=/)
-
-            window.location.href = 'index.html';
-            // Redirige vers la page principale
-
-        } else {
-            alert('Login failed: ' + response.statusText);
-            // Affiche une erreur si le login échoue
-        }
-
-    } catch (error) {
-        alert('An error occurred: ' + error.message);
-        // Affiche une erreur si la requête échoue complètement (ex: API hors ligne)
+    if (!token) {
+        if (loginLink) loginLink.style.display = 'block';
+        // Optionnel : charger les places même sans token si l'API est publique
+        fetchPlaces(null);
+    } else {
+        if (loginLink) loginLink.style.display = 'none';
+        fetchPlaces(token);
     }
+}
+
+// --- Récupération des données API ---
+async function fetchPlaces(token) {
+    const apiUrl = 'http://127.0.0.1:5000/api/v1/places/'; // URL à vérifier selon ton backend
+    const headers = { 'Content-Type': 'application/json' };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+        const response = await fetch(apiUrl, { method: 'GET', headers: headers });
+        if (response.ok) {
+            const places = await response.json();
+            displayPlaces(places);
+        } else {
+            console.error('Erreur lors de la récupération des lieux');
+        }
+    } catch (error) {
+        console.error('Erreur réseau :', error);
+    }
+}
+
+// --- Affichage Dynamique des Lieux ---
+function displayPlaces(places) {
+    const placesList = document.getElementById('places-list');
+    if (!placesList) return;
+
+    // Vide les cartes statiques actuelles du HTML
+    placesList.innerHTML = '';
+
+    places.forEach(place => {
+        // Création de l'élément article/div
+        const card = document.createElement('div');
+        card.classList.add('place-card');
+        
+        // On stocke le prix dans un attribut data- pour le filtre JS
+        const price = place.price_by_night || place.price || 0;
+        card.setAttribute('data-price', price);
+
+        // Injection du HTML (Structure identique à ton CSS)
+        card.innerHTML = `
+            <img src="${place.image_url || 'images/place1.jpg'}" alt="${place.name}">
+            <h3>${place.name || place.title}</h3>
+            <p>$${price} per night</p>
+            <a href="place.html?id=${place.id}" class="details-button">View Details</a>
+        `;
+
+        placesList.appendChild(card);
+    });
+}
+
+// --- Filtrage Client-Side ---
+function setupPriceFilter() {
+    const priceFilter = document.getElementById('price-filter');
+    if (!priceFilter) return;
+
+    priceFilter.addEventListener('change', (event) => {
+        const selectedMaxPrice = event.target.value;
+        const allCards = document.querySelectorAll('.place-card');
+
+        allCards.forEach(card => {
+            const cardPrice = parseFloat(card.getAttribute('data-price'));
+
+            if (selectedMaxPrice === 'all') {
+                card.style.display = 'block';
+            } else {
+                const max = parseFloat(selectedMaxPrice);
+                // On affiche uniquement si le prix est inférieur ou égal au filtre
+                card.style.display = (cardPrice <= max) ? 'block' : 'none';
+            }
+        });
+    });
 }
