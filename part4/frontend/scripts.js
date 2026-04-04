@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 Script chargé !");
     checkAuthentication();
     
-    // --- LOGIQUE DE ROUTAGE ---
     if (document.getElementById('places-list')) {
         setupPriceFilter();
         fetchPlaces(); 
@@ -15,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- UTILS : Gestion des Cookies ---
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -23,24 +21,20 @@ function getCookie(name) {
     return null;
 }
 
-// --- AUTHENTIFICATION ---
 function checkAuthentication() {
     const token = getCookie('token');
     const loginLink = document.getElementById('login-link');
     if (loginLink) {
-        // Cache le bouton login si le token existe
         loginLink.style.display = token ? 'none' : 'block';
     }
 }
 
-// --- LOGIN (Correction pour image_21a966.png) ---
 async function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
     if (!loginForm) return;
 
     loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // EMPÊCHE l'affichage des identifiants dans l'URL
-
+        event.preventDefault();
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
@@ -53,19 +47,16 @@ async function setupLoginForm() {
 
             if (response.ok) {
                 const data = await response.json();
-                // Stockage du token pour activer le bouton "Add Review"
                 document.cookie = `token=${data.access_token}; path=/; max-age=3600`;
                 window.location.href = 'index.html';
             } else {
                 alert("Erreur : Identifiants invalides.");
             }
-        } catch (error) {
-            console.error("Erreur API Login:", error);
-        }
+        } catch (error) { console.error("Erreur API Login:", error); }
     });
 }
 
-// --- TÂCHE 2 : INDEX ---
+// --- AFFICHAGE DE L'INDEX ---
 async function fetchPlaces() {
     try {
         const response = await fetch('http://127.0.0.1:5000/api/v1/places/');
@@ -80,43 +71,58 @@ function displayPlaces(places) {
     const container = document.getElementById('places-list');
     if (!container) return;
     container.innerHTML = ''; 
-    places.forEach(place => {
+    places.forEach((place, index) => {
+        // Calcule le numéro de l'image (1, 2, 3 ou 4)
+        const imgNum = (index % 4) + 1; 
         const card = document.createElement('div');
         card.className = 'place-card';
         card.setAttribute('data-price', place.price);
         card.innerHTML = `
-            <img src="images/place1.jpg" alt="${place.title}">
+            <img src="images/place${imgNum}.jpg" alt="${place.title}">
             <h3>${place.title}</h3>
             <p><strong>$${place.price}</strong> per night</p>
-            <a href="place.html?id=${place.id}" class="details-button">View Details</a>
+            <a href="place.html?id=${place.id}&img=${imgNum}" class="details-button">View Details</a>
         `;
         container.appendChild(card);
     });
 }
 
-// --- TÂCHE 3 : DETAILS (PLACE.HTML) ---
+// --- AFFICHAGE DES DÉTAILS (place.html) ---
 async function fetchPlaceDetails() {
     const params = new URLSearchParams(window.location.search);
     const placeId = params.get('id');
+    // MODIFICATION : On récupère le numéro de l'image depuis l'URL
+    const imgNum = params.get('img') || '1'; 
+    
     if (!placeId) return;
 
     try {
         const response = await fetch(`http://127.0.0.1:5000/api/v1/places/${placeId}`);
         if (response.ok) {
             const place = await response.json();
+            
+            // Mise à jour des textes
             document.getElementById('place-title').textContent = place.title;
             document.getElementById('place-price').textContent = place.price;
             document.getElementById('place-host').textContent = `${place.owner.first_name} ${place.owner.last_name}`;
             
-            // On prépare le lien pour la page de review
+            const descElem = document.getElementById('place-description');
+            if (descElem) descElem.textContent = place.description;
+
+            // MODIFICATION : Mise à jour dynamique de l'image de couverture avec le bon numéro
+            const detailImg = document.querySelector('#place-details img');
+            if (detailImg) {
+                detailImg.src = `images/place${imgNum}.jpg`; 
+            }
+
             const addReviewBtn = document.querySelector('.add-review-btn');
             if (addReviewBtn) {
-                addReviewBtn.href = `add_review.html?id=${place.id}`;
+                // On transmet aussi le numéro d'image pour le formulaire de review
+                addReviewBtn.href = `add_review.html?id=${place.id}&img=${imgNum}`;
             }
 
             displayReviews(place.reviews);
 
-            // Affiche le bouton d'ajout d'avis seulement si connecté
             if (getCookie('token')) {
                 const section = document.getElementById('add-review-section');
                 if (section) section.style.display = 'block';
@@ -141,14 +147,12 @@ function displayReviews(reviews) {
     });
 }
 
-// --- TÂCHE 4 : ADD REVIEW (ADD_REVIEW.HTML) ---
 async function setupReviewForm() {
     const form = document.getElementById('review-form');
     const params = new URLSearchParams(window.location.search);
     const placeId = params.get('id');
     if (!form || !placeId) return;
 
-    // --- Rend le titre dynamique (Correction pour image_2219a5.png) ---
     try {
         const res = await fetch(`http://127.0.0.1:5000/api/v1/places/${placeId}`);
         if (res.ok) {
@@ -159,16 +163,12 @@ async function setupReviewForm() {
     } catch (e) { console.error(e); }
 
     form.addEventListener('submit', async (event) => {
-        event.preventDefault(); // EMPÊCHE le rafraîchissement avec les données dans l'URL
-
+        event.preventDefault();
         const token = getCookie('token');
         const text = document.getElementById('review').value;
         const rating = document.getElementById('rating').value;
 
-        if (!token) {
-            alert("You must be logged in!");
-            return;
-        }
+        if (!token) { alert("You must be logged in!"); return; }
 
         try {
             const response = await fetch(`http://127.0.0.1:5000/api/v1/reviews/`, {
@@ -177,26 +177,19 @@ async function setupReviewForm() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify({ 
-                    place_id: placeId, 
-                    text: text, 
-                    rating: parseInt(rating) 
-                })
+                body: JSON.stringify({ place_id: placeId, text: text, rating: parseInt(rating) })
             });
 
             if (response.ok) {
                 alert("Review added!");
-                window.location.href = `place.html?id=${placeId}`;
-            } else {
-                alert("Error during submission.");
-            }
-        } catch (error) {
-            console.error("Erreur POST review:", error);
-        }
+                // On récupère imgNum pour retourner à la page détails avec la bonne image
+                const imgNum = params.get('img') || '1';
+                window.location.href = `place.html?id=${placeId}&img=${imgNum}`;
+            } else { alert("Error during submission."); }
+        } catch (error) { console.error("Erreur POST review:", error); }
     });
 }
 
-// --- FILTRE (INDEX) ---
 function setupPriceFilter() {
     const filter = document.getElementById('price-filter');
     if (!filter) return;
